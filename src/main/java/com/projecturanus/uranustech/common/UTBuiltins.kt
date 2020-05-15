@@ -314,7 +314,7 @@ fun registerResources() {
     val fileSystem = Jimfs.newFileSystem("UranusTech", Configuration.builder(PathType.unix()).setWorkingDirectory("/").setRoots("/").build())
     /*
     Files.write(fileSystem.getPath("pack.mcmeta"), """
-{
+{javaClass
     "pack": {
         "description": "Generated data for UranusTech",
         "pack_format": 4

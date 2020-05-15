@@ -15,6 +15,9 @@ import org.apache.logging.log4j.LogManager
 const val MODID = "uranustech"
 val logger = LogManager.getFormatterLogger("UranusTech")
 
+/**
+ * 整个mod入口
+ */
 object UranusTech: ModInitializer {
     override fun onInitialize() {
         logger.info("[UranusTech] Initializing...")

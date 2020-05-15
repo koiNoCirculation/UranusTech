@@ -24,7 +24,16 @@ class UTMaterial : SimpleMaterial() {
 
 }
 
+/**
+ * 衡量物质的量
+ */
 data class JsonMaterialStack(val material: String, val amount: Long)
+/**
+ * 用于产生魔法电解机/离心机配方
+ * @param stacks 生成的物质列表
+ * @param dividedStacks　感觉没什么用
+ * @param divider　配方接受多少输入
+ */
 data class MaterialComponent(val stacks: Array<JsonMaterialStack>, val dividedStacks: Array<JsonMaterialStack>, val divider: Int) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -45,17 +54,115 @@ data class MaterialComponent(val stacks: Array<JsonMaterialStack>, val dividedSt
     }
 }
 
+/**
+ * 材料的json表示
+ */
 open class JsonMaterial(var name: String, val tags: List<String>,
                         @SerializedName("textureSet")
-                   var textureSetInternal: String,
+                        /**
+                         * 内部纹理集
+                         */
+                        var textureSetInternal: String,
+                        /**
+                         * 燃烧时间
+                         */
                         val burnTime: Int,
                         @SerializedName("description")
-                        val descriptionInternal: Array<String>?, val byProducts: Array<String>?,
-                        val handleMaterial: String, val hidden: Boolean,
-                        val colorSolid: Int, val colorLiquid: Int, val colorGas: Int, val colorPlasma: Int,
-                        val fullName: String, val tooltipChemical: String, val gramPerCubicCentimeter: Double, val oreMultiplier: Int,
-                        val oreProgressingMultiplier: Int, val toolDurability: Long, val toolSpeed: Float, val toolTypes: Int, val toolQuality: Int,
-                        val meltingPoint: Int, val boilingPoint: Int, val plasmaPoint: Int, val neutrons: Int = 0, val protons: Int = 0, val electrons: Int = 0,
+                        /**
+                         * 内部描述
+                         */
+                        val descriptionInternal: Array<String>?,
+                        /**
+                         * 副产品
+                         */
+                        val byProducts: Array<String>?,
+                        /**
+                         *　工具手柄材料，比如钍锤子需要钨钢杆做手柄，则这里填 any_tungstensteel_rod 之类的
+                         */
+                        val handleMaterial: String,
+                        /**
+                         * 是否隐藏
+                         */
+                        val hidden: Boolean,
+                        /**
+                         * 固体（锭）颜色，24位
+                         */
+                        val colorSolid: Int,
+                        /**
+                         * 液体（熔融）颜色，24位
+                         */
+                        val colorLiquid: Int,
+                        /**
+                         * 气体颜色, 24位
+                         */
+                        val colorGas: Int,
+                        /**
+                         * 等离子颜色，24位
+                         */
+                        val colorPlasma: Int,
+                        /**
+                         * 全名(displayname, unlocalized)
+                         */
+                        val fullName: String,
+                        /**
+                         * tooltip的化学式子
+                         */
+                        val tooltipChemical: String,
+                        /**
+                         * 密度(g * cm ^ -3)
+                         */
+                        val gramPerCubicCentimeter: Double,
+                        /**
+                         * 增产系数
+                         */
+                        val oreMultiplier: Int,
+                        /**
+                         * 处理(processing)增产系数
+                         */
+                        val oreProgressingMultiplier: Int,
+                        /**
+                         * 作为工具的耐久
+                         */
+                        val toolDurability: Long,
+                        /**
+                         * 作为工具的速度
+                         */
+                        val toolSpeed: Float,
+                        /**
+                         * 工具类型
+                         */
+                        val toolTypes: Int,
+                        /**
+                         * 工具品质
+                         */
+                        val toolQuality: Int,
+                        /**
+                         *熔点
+                         */
+                        val meltingPoint: Int,
+                        /**
+                         * 沸点
+                         */
+                        val boilingPoint: Int,
+                        /**
+                         * 离子体温度
+                         */
+                        val plasmaPoint: Int,
+                        /**
+                         * 中子数目
+                         */
+                        val neutrons: Int = 0,
+                        /**
+                         * 质子数目
+                         */
+                        val protons: Int = 0,
+                        /**
+                         * 电子数目
+                         */
+                        val electrons: Int = 0,
+                        /**
+                         * 组成
+                         */
                         val components: MaterialComponent?): Material {
     var validFormsCache: List<Form> = emptyList()
     var elementsCache: Set<Element> = emptySet()
@@ -98,6 +205,9 @@ val GEM_FORMS = listOf(GEM, PLATE_GEM, NUGGET, STICK, DUST, LENS, PLATE_GEM_TINY
 val PART_FORMS = listOf(ROUND, RING, BOLT, ROTOR, CART_WHEELS, SCREW)
 val STONE_FORMS = listOf(STONE, SMALL_BRICKS, SMALL_TILES, SMOOTH, BRICKS, BRICKS_CHISELED, BRICKS_CRACKED, BRICKS_MOSSY, BRICKS_REDSTONE, BRICKS_REINFORCED, COBBLE, COBBLE_MOSSY, SQUARE_BRICKS, TILES, WINDMILL_TILES_A, WINDMILL_TILES_B)
 
+/**
+ * 矿物词典
+ */
 class UTWildcardMaterial(identifier: Identifier, vararg submaterials: Material): SimpleMaterial(), WildcardMaterial {
     val knownSubmaterials = mutableListOf<Material>()
     val materialTag: Tag<Material>

@@ -12,7 +12,16 @@ import java.util.*;
 
 public interface Material extends RegistryEntry, Colorable {
     Map<Compound, Integer> getComposition();
+    /**
+     * 元素
+     * @return
+     */
     Set<Element> getElements();
+
+    /**
+     * 化学式子
+     * @return
+     */
     String getChemicalCompound();
     List<Form> getValidForms();
     Collection<MaterialInfo> getInfos();
