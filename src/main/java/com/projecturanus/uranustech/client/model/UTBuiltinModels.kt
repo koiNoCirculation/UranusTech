@@ -35,6 +35,15 @@ import kotlin.system.measureTimeMillis
 val modelCache = ConcurrentHashMap<Identifier, JsonUnbakedModel>()
 
 fun initModels() = runBlocking {
+    /**
+     * 注册了一个回调...
+     * ModelIdentifier对象长这样
+     * {
+     *      "namespace":"uranustech",
+     *      "path": "actinium_ore",
+     *      "variant": "rock=andesite"
+     * }
+     */
     ModelLoadingRegistry.INSTANCE.registerVariantProvider { ModelVariantProvider { modelId, context ->
         if (modelId.namespace == MODID) {
             when {
@@ -44,6 +53,14 @@ fun initModels() = runBlocking {
         } else null
     } }
 
+    /**
+     * 这也是回调
+     * resourceId长这样:
+     * {
+     *      "namespace": "minecraft",
+     *      "path": "block/item_frame_map"
+     * }
+     */
     ModelLoadingRegistry.INSTANCE.registerResourceProvider {
         ModelResourceProvider { resourceId, context ->
             loadCustomModel(resourceId, context)
@@ -56,10 +73,24 @@ fun initModels() = runBlocking {
         withContext(Dispatchers.Default) {
             clientLogger.info("Generate form models took " + measureTimeMillis {
                 Iconsets.values().forEach {
+                    /**
+                     * 生产物品的模型
+                     */
                     formRegistry.asSequence().filter { form -> form.generateType == GenerateTypes.ITEM }.forEach { form ->
+                        //uranustech:fluid/rotor
                         model(Identifier(MODID, "${it.getName()}/${form.asString()}")) {
+                            /**
+                             * "parent": "item/generated"
+                             */
                             itemSetup()
+                            /**
+                             * it: 当前material的iconset
+                             * form: 当前material的form，小写
+                             * assets\uranustech\textures\item\materialicons\fluid\rotor.png
+                             */
+                            //layer0
                             layer("item/materialicons/${it.getName()}/${form.asString()}")
+                            //layer1
                             layer("item/materialicons/${it.getName()}/${form.asString()}_overlay")
                             register()
                         }
@@ -69,6 +100,9 @@ fun initModels() = runBlocking {
                 // Block item
                 materialRegistry.forEach {
                     STONE_FORMS.forEach { form ->
+                        //uranustech:actinium_stone_item
+                        //identifier -> actinium
+                        //form: stone
                         model(Identifier(MODID, "${it.identifier.path}_${form.asString()}_item")) {
                             parent = "$MODID:block/${it.identifier.path}_${form.asString()}"
                             register()
@@ -84,9 +118,18 @@ fun initModels() = runBlocking {
                 Iconsets.values().forEach {
                     formRegistry.asSequence().filter { form -> form.generateType == GenerateTypes.BLOCK && form != Forms.ORE && form !in STONE_FORMS }.forEach { form ->
                         model(Identifier(MODID, "${it.getName()}/${form.asString()}")) {
+                            /**
+                             * "parent":"block/block"
+                             */
                             blockSetup()
+                            /**
+                             * 设定base和overlay
+                             */
                             texture("base", "block/materialicons/${it.getName()}/${form.asString()}")
                             texture("overlay", "block/materialicons/${it.getName()}/${form.asString()}_overlay")
+                            /**
+                             * element应该是常规操作
+                             */
                             element {
                                 from = Triple(0, 0, 0)
                                 to = Triple(16, 16, 16)
@@ -111,9 +154,19 @@ fun initModels() = runBlocking {
                         // Ore block
                         model(Identifier(MODID, "${it.getName()}/${rock.asString()}/ore")) {
                             blockSetup()
+                            /**
+                             * 去对应textureset下面找ore和ore_overlay
+                             */
                             texture("base", "block/materialicons/${it.getName()}/ore")
                             texture("overlay", "block/materialicons/${it.getName()}/ore_overlay")
+                            /**
+                             * 如果是石头的类型就取mc的石头底色，
+                             * 否则去uranustech:block/stones/$StoneType/stone下面找一个叫stone的贴图
+                             */
                             texture("stone", if (rock == Rocks.STONE) Identifier("minecraft", "block/stone") else Identifier(MODID, "block/stones/${rock.asString()}/stone"))
+                            /**
+                             * 粒子效果也是Ore
+                             */
                             texture("particle", "block/materialicons/${it.getName()}/ore")
                             element {
                                 from = Triple(0, 0, 0)
@@ -206,7 +259,13 @@ fun initModels() = runBlocking {
     clientLogger.info("Cached ${modelCache.size} models")
 }
 
+/**
+ * 从缓存读出对应的方块/物品的模型
+ */
 private fun loadOreModel(modelId: ModelIdentifier, context: ModelProviderContext): UnbakedModel? {
+    /**
+     * 确定矿属于那种石头
+     */
     val rock =
             when {
                 modelId.variant.isNullOrEmpty() -> Rocks.STONE.asString()
@@ -217,6 +276,9 @@ private fun loadOreModel(modelId: ModelIdentifier, context: ModelProviderContext
     return modelCache[Identifier(MODID, "${material.textureSet?.toLowerCase()}/${rock}/ore")]
 }
 
+/**
+ * 从缓存读出对应的方块/物品的自定义模型
+ */
 private fun loadCustomModel(resourceId: Identifier, context: ModelProviderContext): UnbakedModel? {
     if (resourceId.namespace != MODID)
         return null
