@@ -197,12 +197,31 @@ open class JsonMaterial(var name: String, val tags: List<String>,
     }
 }
 
-val INGOT_FORMS = listOf(INGOT, NUGGET, PLATE, DUST, STICK, INGOT_DOUBLE, INGOT_QUADRUPLE, INGOT_QUINTUPLE, INGOT_TRIPLE, PLATE, PLATE_TINY, PLATE_GEM_TINY, PLATE_QUADRUPLE, PLATE_QUINTUPLE, PLATE_TRIPLE, PLATE_DOUBLE, PLATE_CURVED, PLATE_DENSE)
+/**
+ * 锭，粉，板等一系列材料
+ */
+val MATERIAL_FORMS = listOf(INGOT, NUGGET, PLATE, DUST, STICK, INGOT_DOUBLE, INGOT_QUADRUPLE, INGOT_QUINTUPLE, INGOT_TRIPLE, PLATE, PLATE_TINY, PLATE_GEM_TINY, PLATE_QUADRUPLE, PLATE_QUINTUPLE, PLATE_TRIPLE, PLATE_DOUBLE, PLATE_CURVED, PLATE_DENSE)
+
+/**
+ * 工具
+ */
 val TOOL_FORMS = listOf(TOOL_HEAD_ARROW, TOOL_HEAD_AXE, TOOL_HEAD_AXE_DOUBLE, TOOL_HEAD_BUZZ_SAW, TOOL_HEAD_CHAINSAW, TOOL_HEAD_CHISEL, TOOL_HEAD_CONSTRUCTION_PICKAXE,
         TOOL_HEAD_DRILL, TOOL_HEAD_FILE, TOOL_HEAD_HAMMER, TOOL_HEAD_HOE, TOOL_HEAD_PICKAXE, TOOL_HEAD_PLOW, TOOL_HEAD_SAW, TOOL_HEAD_SCREWDRIVER,
         TOOL_HEAD_SENSE, TOOL_HEAD_SHOVEL, TOOL_HEAD_SPADE, TOOL_HEAD_SWORD, TOOL_HEAD_UNIVERSAL_SPADE, TOOL_HEAD_WRENCH)
+
+/**
+ * 宝石，宝石板子，宝石块，宝石粉，镜头，etc
+ */
 val GEM_FORMS = listOf(GEM, PLATE_GEM, NUGGET, STICK, DUST, LENS, PLATE_GEM_TINY)
+
+/**
+ * 零件
+ */
 val PART_FORMS = listOf(ROUND, RING, BOLT, ROTOR, CART_WHEELS, SCREW)
+
+/**
+ * 各种奇怪的石头
+ */
 val STONE_FORMS = listOf(STONE, SMALL_BRICKS, SMALL_TILES, SMOOTH, BRICKS, BRICKS_CHISELED, BRICKS_CRACKED, BRICKS_MOSSY, BRICKS_REDSTONE, BRICKS_REINFORCED, COBBLE, COBBLE_MOSSY, SQUARE_BRICKS, TILES, WINDMILL_TILES_A, WINDMILL_TILES_B)
 
 /**
@@ -227,13 +246,16 @@ class TagProcessor(val tags: List<String>) {
     fun getForms(): Set<Form> {
         val set = hashSetOf<Form>()
         tags.forEach {
+            /**
+             * 材料声明了 ITEMGENERATOR.*
+             */
             if (it.startsWith("ITEMGENERATOR."))
                 if (formRegistry.asSequence().any { form -> form.asString() == it.removePrefix("ITEMGENERATOR.").removeSuffix("S").toLowerCase() })
                     set += formRegistry[Identifier(MODID, it.removePrefix("ITEMGENERATOR.").removeSuffix("S").toLowerCase())]
                 else
                     when (it.removePrefix("ITEMGENERATOR.")) {
-                        "INGOTS" -> set.addAll(INGOT_FORMS)
-                        "INGOTS_HOT" -> set.addAll(INGOT_FORMS + INGOT_HOT)
+                        "INGOTS" -> set.addAll(MATERIAL_FORMS)
+                        "INGOTS_HOT" -> set.addAll(MATERIAL_FORMS + INGOT_HOT)
                         "PARTS" -> set.addAll(PART_FORMS)
                         "DIRTY_DUST" -> set += DUST_IMPURE
                         "GEMS" -> set.addAll(GEM_FORMS)
@@ -242,8 +264,14 @@ class TagProcessor(val tags: List<String>) {
                         "GAS" -> set += GAS
                     }
             else if (it == "PROPERTIES.HAS_TOOL_STATS")
-                set.addAll(TOOL_FORMS)
+            /**
+             * 材料声明了HAS_TOOL_STATS
+             */
+            set.addAll(TOOL_FORMS)
             else if (it == "PROPERTIES.STONE")
+            /**
+             * 材料声明了PROPERTIES.STONE
+             */
                 set.addAll(STONE_FORMS)
         }
         return set

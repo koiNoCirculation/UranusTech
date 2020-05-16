@@ -26,11 +26,11 @@ public class MaterialStack implements Cloneable, Nameable {
     }
 
     public MaterialStack(Material material, Form form) {
-        this(material, form, U, -1);
+        this(material, form, U, 300);
     }
 
     public MaterialStack(Material material, Form form, long amount) {
-        this(material, form, amount, -1);
+        this(material, form, amount, 300);
     }
 
     public MaterialStack(Material material, Form form, long amount, double temperature) {

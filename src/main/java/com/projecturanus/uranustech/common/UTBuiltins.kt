@@ -39,7 +39,6 @@ import com.projecturanus.uranustech.common.material.MaterialAPIImpl
 import com.projecturanus.uranustech.common.material.TagProcessor
 import com.projecturanus.uranustech.common.material.setupDelegate
 import com.projecturanus.uranustech.common.resource.asFlow
-import com.projecturanus.uranustech.common.resource.asSequence
 import com.projecturanus.uranustech.common.util.*
 import com.projecturanus.uranustech.common.worldgen.ORE_GEN_FEATURE
 import com.projecturanus.uranustech.common.worldgen.RockLayerBuilder
@@ -48,12 +47,10 @@ import com.projecturanus.uranustech.logger
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.forEach
 import net.fabricmc.fabric.api.client.itemgroup.FabricItemGroupBuilder
 import net.fabricmc.fabric.api.container.ContainerProviderRegistry
 import net.fabricmc.fabric.api.registry.CommandRegistry
 import net.minecraft.block.Block
-import net.minecraft.command.arguments.IdentifierArgumentType.identifier
 import net.minecraft.item.BlockItem
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
@@ -105,6 +102,9 @@ fun registerBuiltin() = runBlocking {
             try {
                 val material = gson.fromJson(String(content), JsonMaterial::class.java).apply {
                     name = name.toLowerCase()
+                    /**
+                     * 获取属性
+                     */
                     infos = mapOf(
                             Constants.ATOM_INFO to AtomInfo().also { it.electrons = electrons; it.neutrons = neutrons; it.protons = protons },
                             Constants.MATTER_INFO to MatterInfo().also { it.gramPerCubicCentimeter = gramPerCubicCentimeter },
@@ -113,6 +113,9 @@ fun registerBuiltin() = runBlocking {
                             Constants.FUEL_INFO to FuelInfo().also { it.burnTime = burnTime },
                             Constants.TOOL_INFO to ToolInfo().also { it.toolDurability = toolDurability; it.toolQuality = toolQuality; it.toolSpeed = toolSpeed; it.toolTypes = toolTypes; it.handleMaterialId = Identifier(MODID, handleMaterial) }
                     )
+                    /**
+                     * form从TagProcessor获取
+                     */
                     val tagProcessor = TagProcessor(tags)
                     validFormsCache = tagProcessor.getForms().toList()
                 }
@@ -135,6 +138,9 @@ fun registerBuiltin() = runBlocking {
         materialRegistry.forEach { material ->
             withContext(Dispatchers.Default) {
                 launch {
+                    /**
+                     * 所有的方块，但不包括Ore的Form
+                     */
                     val formBlocks = material.validForms
                             .asSequence()
                             .filter { form -> form.generateType == GenerateTypes.BLOCK && form != Forms.ORE }
@@ -143,28 +149,58 @@ fun registerBuiltin() = runBlocking {
                             }.toMap().toMutableMap()
 
                     // Specific settings for ores
+                    /**
+                     * 注册矿石（如果定了了该物质的矿石）
+                     */
                     if (Forms.ORE in material.validForms) {
                         val ore = OreBlock(MaterialStack(material, Forms.ORE))
                         for (rock in Rocks.values()) {
+                            /**
+                             * 注册blockOreItem
+                             */
                             val oreItem = registerItem(Identifier(MODID, "${material.identifier.path}_${rock.asString()}_ore"), OreBlockItem(ore, rock))
                             oreItemMap[ore] = (oreItemMap[ore] ?: mutableMapOf()).apply { put(rock, oreItem) }
                         }
+                        /**
+                         * 注册blockOre
+                         */
                         registerBlock(Identifier(MODID, "${material.identifier.path}_ore"), ore, false)
+                        /**
+                         * 移除，说明石头和矿石两个是冲突的，两者只取其中之一
+                         */
                         formBlocks.remove(Forms.ORE)
                         blockMaterialMap[material] = blockMaterialMap.getOrDefault(material, mutableMapOf()).apply { put(Forms.ORE, ore) }
                     }
-                    formBlocks.filter { (form, block) -> form == Forms.STONE && Rocks.values().any { rock -> rock.name == block.stack.material.identifier.path.toUpperCase() } }.forEach { (form, block) -> rockMap[Rocks.valueOf(block.stack.material.identifier.path.toUpperCase())] = block }
+                    /**
+                     * 注册有form == stone(石头)的材料
+                     */
+                    formBlocks.filter { (form, block) ->
+                        form == Forms.STONE && Rocks.values().any {
+                            rock -> rock.name == block.stack.material.identifier.path.toUpperCase()
+                        }
+                    }.forEach {
+                        (form, block) -> rockMap[Rocks.valueOf(block.stack.material.identifier.path.toUpperCase())] = block
+                    }
                     blockMaterialMap[material] = blockMaterialMap.getOrDefault(material, formBlocks.toMutableMap())
                     formBlocks.forEach { (form, block) ->
                         registerBlock(Identifier(MODID, "${block.stack.material.identifier.path}_${form.toString().toLowerCase()}"), block) { MaterialBlockItem(block).also { blockItemMap[block] = it } }
                     }
                 }
+                /**
+                 * form声明为流体的
+                 */
                 // Fluid
                 launch {
+                    /**
+                     * 只需要generateType == FLUID
+                     */
                     material.validForms.asSequence().filter { it.generateType == GenerateTypes.FLUID }.forEach { form ->
                         if (form == Forms.MOLTEN) {
                             Registry.FLUID.add(Identifier(MODID, "${material.identifier.path}_molten_still"), MoltenMaterialFluid.Still(MaterialStack(material, Forms.MOLTEN)))
                         } else if (form == Forms.GAS) {
+                            Registry.FLUID.add(Identifier(MODID, "${material.identifier.path}_gas_still"), MoltenMaterialFluid.Still(MaterialStack(material, Forms.GAS)))
+                        } else if (form == Forms.PLASMA) {
+                            Registry.FLUID.add(Identifier(MODID, "${material.identifier.path}_plasma_still"), MoltenMaterialFluid.Still(MaterialStack(material, Forms.PLASMA)))
 
                         }
                     }
@@ -176,14 +212,17 @@ fun registerBuiltin() = runBlocking {
     logger.info("Generate items in " + measureTimeMillis {
         withContext(Dispatchers.Default) {
             materialRegistry.onEach {
-                        val toolInfo = it.getInfo<ToolInfo?>(TOOL_INFO)
-                        if (toolInfo != null) {
+                        val toolInfo: ToolInfo? = it.getInfo(TOOL_INFO)
+                        toolInfo?.apply {
+                            /**
+                             * 每个工具都注册一次
+                             */
                             Tools.values().forEach { tool ->
                                 val toolItem =
-                                    if (tool.hasHandleMaterial())
-                                        UTToolItem(MaterialStack(it, tool), MaterialStack(toolInfo.handleMaterial, tool.handleForm), settings = Item.Settings().maxCount(1).group(if (it.isHidden) null else groupTool))
-                                    else
-                                        UTToolItem(MaterialStack(it, tool), settings = Item.Settings().maxCount(1).group(if (it.isHidden) null else groupTool))
+                                        if (tool.hasHandleMaterial())
+                                            UTToolItem(MaterialStack(it, tool), MaterialStack(handleMaterial, tool.handleForm), settings = Item.Settings().maxCount(1).group(if (it.isHidden) null else groupTool))
+                                        else
+                                            UTToolItem(MaterialStack(it, tool), settings = Item.Settings().maxCount(1).group(if (it.isHidden) null else groupTool))
                                 registerItem(Identifier(it.identifier.namespace, "${it.identifier.path}_${tool.asString()}"),
                                         toolItem)
                                 toolMaterialMap[it] = toolMaterialMap.getOrDefault(it, mutableMapOf()).apply { put(tool, toolItem) }

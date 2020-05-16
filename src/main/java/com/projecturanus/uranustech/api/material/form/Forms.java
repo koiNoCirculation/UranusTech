@@ -238,6 +238,10 @@ public enum Forms implements Form {
      */
     GAS(GenerateTypes.FLUID),
     /**
+     * 离子体
+     */
+    PLASMA(GenerateTypes.FLUID),
+    /**
      * 其他
      */
     OTHER(GenerateTypes.OTHER);

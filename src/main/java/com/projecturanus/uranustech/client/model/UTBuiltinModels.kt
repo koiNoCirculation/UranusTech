@@ -29,6 +29,9 @@ import net.minecraft.util.Identifier
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.system.measureTimeMillis
 
+/**
+ * 目前方块物品模型跟放置到世界的模型不太一致。。。。
+ */
 val modelCache = ConcurrentHashMap<Identifier, JsonUnbakedModel>()
 
 fun initModels() = runBlocking {

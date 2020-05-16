@@ -16,12 +16,23 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.world.BlockView
 
 open class MaterialBlock(override val stack: MaterialStack): Block(FabricBlockSettings.of(Material.STONE).build()), MaterialContainer, ItemConvertible {
+    /**
+     * inherit from ItemConvertible
+     * 获取block对应的item(挖掉)
+     */
     override fun asItem() = blockItemMap[this]
 
+    /**
+     * inherit from Block
+     * 捡起来是什麽
+     */
     override fun getPickStack(blockView: BlockView, blockPos: BlockPos, blockState: BlockState): ItemStack {
         return asItem()?.let(::ItemStack) ?: ItemStack.EMPTY
     }
 
+    /**
+     * inherit from Block
+     */
     override fun addStacksForDisplay(itemGroup: ItemGroup, stackList: DefaultedList<ItemStack>) {
         if (itemGroup == groupBase) {
             asItem()?.let(::ItemStack)?.let(stackList::add)

@@ -3,6 +3,7 @@ package com.projecturanus.uranustech.common.command
 import com.mojang.brigadier.CommandDispatcher
 import com.projecturanus.uranustech.api.material.Material
 import com.projecturanus.uranustech.common.container.MATERIAL_SHOWCASE
+import com.projecturanus.uranustech.common.materialRegistry
 import com.projecturanus.uranustech.common.util.localizedName
 import net.fabricmc.fabric.api.container.ContainerProviderRegistry
 import net.minecraft.entity.player.PlayerEntity
@@ -13,6 +14,8 @@ import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.text.LiteralText
 import net.minecraft.text.Style
 import net.minecraft.util.Formatting
+import net.minecraft.util.Identifier
+import net.minecraft.util.registry.Registry
 
 object MaterialCommand {
     fun register(dispatcher: CommandDispatcher<ServerCommandSource>) {
@@ -38,6 +41,27 @@ object MaterialCommand {
                     it.source.player.giveItemStack(ItemStack(Items.WRITTEN_BOOK))
                 0
             }))
+            .then(CommandManager.literal("hand").executes {
+                    val itemMandHand : ItemStack? = it.source.player.itemsHand.toList().get(0)
+                    itemMandHand?.apply {
+                        Registry.ITEM.getId(item).apply {
+                            it.source.sendFeedback(LiteralText(namespace + ":" + path),true);
+                            materialRegistry.get(Identifier(namespace + ":" + path))?.apply {
+                                it.source.sendFeedback(LiteralText(toString()), true)
+                                arrayOf(localizedName.setStyle(Style().setColor(Formatting.AQUA)),
+                                        LiteralText(chemicalCompound).setStyle(Style().setColor(Formatting.GOLD)),
+                                        *description.map(::LiteralText).toTypedArray(),
+                                        LiteralText("Texture set: ${textureSet}").setStyle(Style().setColor(Formatting.BLUE)),
+                                        LiteralText("Valid forms: ${validForms}").setStyle(Style().setColor(Formatting.RED)),
+                                        LiteralText("Color: ${color}").setStyle(Style().setColor(Formatting.AQUA))).forEach {
+                                    text -> it.source.sendFeedback(text, false)
+                                }
+                            }
+                        }
+                    }
+                    0
+                }
+            )
         )
     }
 }
