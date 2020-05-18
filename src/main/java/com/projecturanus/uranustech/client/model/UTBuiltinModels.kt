@@ -8,6 +8,7 @@ import com.projecturanus.uranustech.api.material.info.ToolInfo
 import com.projecturanus.uranustech.api.render.iconset.Iconsets
 import com.projecturanus.uranustech.api.tool.Tool
 import com.projecturanus.uranustech.api.tool.Tools
+import com.projecturanus.uranustech.api.worldgen.Rock
 import com.projecturanus.uranustech.api.worldgen.Rocks
 import com.projecturanus.uranustech.client.clientLogger
 import com.projecturanus.uranustech.common.formRegistry
@@ -44,14 +45,16 @@ fun initModels() = runBlocking {
      *      "variant": "rock=andesite"
      * }
      */
-    ModelLoadingRegistry.INSTANCE.registerVariantProvider { ModelVariantProvider { modelId, context ->
-        if (modelId.namespace == MODID) {
-            when {
-                modelId.path.endsWith("ore") -> loadOreModel(modelId, context)
-                else -> loadCustomModel(modelId, context)
-            }
-        } else null
-    } }
+    ModelLoadingRegistry.INSTANCE.registerVariantProvider {
+        ModelVariantProvider { modelId, context ->
+            if (modelId.namespace == MODID) {
+                when {
+                    modelId.path.endsWith("ore") -> loadOreModel(modelId, context)
+                    else -> loadCustomModel(modelId, context)
+                }
+            } else null
+        }
+    }
 
     /**
      * 这也是回调
@@ -98,14 +101,17 @@ fun initModels() = runBlocking {
                 }
 
                 // Block item
+
                 materialRegistry.forEach {
-                    STONE_FORMS.forEach { form ->
-                        //uranustech:actinium_stone_item
-                        //identifier -> actinium
-                        //form: stone
-                        model(Identifier(MODID, "${it.identifier.path}_${form.asString()}_item")) {
-                            parent = "$MODID:block/${it.identifier.path}_${form.asString()}"
-                            register()
+                    Rocks.values().forEach { rock ->
+                        STONE_FORMS.forEach { st ->
+                            //uranustech:actinium_stone_item
+                            //identifier -> actinium
+                            //form: stone
+                            model(Identifier(MODID, "${it.identifier.path}_${rock.name.toLowerCase()}_${st.name.toLowerCase()}_item")) {
+                                parent = "$MODID:block/${rock.name.toLowerCase()}_${st.name.toLowerCase()}"
+                                register()
+                            }
                         }
                     }
                 }
@@ -115,6 +121,8 @@ fun initModels() = runBlocking {
         // Cache block models
         withContext(Dispatchers.Default) {
             clientLogger.info("Generate block models took " + measureTimeMillis {
+                //uranustech:${iconset}/${form}
+                //materialIcons
                 Iconsets.values().forEach {
                     formRegistry.asSequence().filter { form -> form.generateType == GenerateTypes.BLOCK && form != Forms.ORE && form !in STONE_FORMS }.forEach { form ->
                         model(Identifier(MODID, "${it.getName()}/${form.asString()}")) {
@@ -148,6 +156,12 @@ fun initModels() = runBlocking {
                             register()
                         }
                     }
+
+                    //uranustech:cube/andesite/ore
+                    //block/materialicons/andesite/ore
+                    //block/materialicons/andesite/ore_overlay
+                    //block/stones/andersite/stone
+                    //block/stones/andersite/ore
 
                     // Ore
                     Rocks.values().forEach { rock ->
@@ -197,10 +211,21 @@ fun initModels() = runBlocking {
 
                 // Rock block model
                 materialRegistry.forEach {
-                    STONE_FORMS.forEach { form ->
-                        model(Identifier(MODID, "${it.identifier.path}_${form.asString()}")) {
+
+                    Rocks.values().forEach { rock ->
+                        /**
+                         * uranustech:surfur_dioxide_andersite
+                         */
+                        model(Identifier(MODID, "${it.identifier.path}_stone")) {
                             parent = "block/cube_all"
-                            texture("all", "block/stones/${it.identifier.path}/${form.asString()}")
+                            when (rock) {
+                                Rocks.STONE -> {
+                                    texture("all", Identifier("minecraft", "block/stone"))
+                                }
+                                else -> {
+                                    texture("all", "block/stones/${rock.name.toLowerCase()}/stone")
+                                }
+                            }
                             register()
                         }
                     }
@@ -269,7 +294,8 @@ private fun loadOreModel(modelId: ModelIdentifier, context: ModelProviderContext
     val rock =
             when {
                 modelId.variant.isNullOrEmpty() -> Rocks.STONE.asString()
-                modelId.variant == "inventory" -> (Rocks.values().asSequence().find { modelId.path.removeSuffix("_ore").endsWith(it.asString()) } ?: Rocks.STONE).asString()
+                modelId.variant == "inventory" -> (Rocks.values().asSequence().find { modelId.path.removeSuffix("_ore").endsWith(it.asString()) }
+                        ?: Rocks.STONE).asString()
                 else -> modelId.variant.split(',').first { it.startsWith("rock=") }.removePrefix("rock=")
             }
     val material = materialRegistry[Identifier(MODID, modelId.path.removePrefix("item/").removeSuffix("_ore"))]
@@ -287,7 +313,7 @@ private fun loadCustomModel(resourceId: Identifier, context: ModelProviderContex
     if (form != null) {
         if (form in STONE_FORMS) {
             if (resourceId is ModelIdentifier && resourceId.variant == "inventory") {
-                return modelCache[Identifier(resourceId.namespace, resourceId.path.removePrefix("block/").removePrefix("item/") + "_item")]
+                    return modelCache[Identifier(resourceId.namespace, resourceId.path.removePrefix("block/").removePrefix("item/") + "_item")]
             }
             return modelCache[Identifier(resourceId.namespace, resourceId.path.removePrefix("block/"))]
         } else if (form.generateType == GenerateTypes.TOOL) {
